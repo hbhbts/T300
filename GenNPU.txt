@@ -1,0 +1,30 @@
+作为verilog资深编程专家，我们需要写个NPU IP，该NPU包含4x4个mmp，4个psum，4个vsp等模块，mmp按照4行4列排列，mmp输入来自vsp或者mmp，在行方向上mmp是在处理不同的output channel, 在列方向上mmp是在input channel上做psum累加，最终的累加结果输出给4个psum
+
+任务1：用verilog写出mmp，该模块做mac计算，具体要求如下：
+1. 有两个实例化参数分别是坐标int类型的IDX和IDY
+2. 2D矩阵8x8x16bit activation input data 和input data valid
+3. mmp中有个128bit宽，2048深度的sram用于存放weights 
+4. 外部可以通过memory access interface 写入weights sram，当memory interface中的memory id跟当前module的IDX一样时，选通该module的sram，并disable bypass给下一级module; 当memory interface中的memory id跟当前的IDX不一样时，不选通该moudle的sram，直接bypass到下一级module
+5. 外部可以通过cmd interface,包含valid和cmd data, 当cmd_valid=1和cmd_data.id=0控制weights ram的读出数据每四拍拼成一个8x8x8bit reg0; 当cmd_valid=1和cmd_data.id=1控制weights ram的读出数据每四拍拼成一个8x8x8bit reg1; 当cmd_valid=1和cmd_data.id=2时,将reg0的值赋给reg2;当cmd_valid=1和cmd_data.id=3时,将reg1的值赋给reg2;
+6. 当input data valid=1时，reg2 与input activation做矩阵乘，内积的维度是在第二维，输出8x8x27bit psum
+7. psum与上一级模块输出的input psum做加法输出30bit psum
+8. input activation data和 data valid 会打一拍bypass给下一级模块
+9. memory access interface打一拍输出给下一级，memory接口采用tsmc 28nm single port sram规范
+10. write a testbench to verify the function of mmp module, hope to cover all feature above from 1 to 9
+
+
+任务2：用verilog写出vsp，该模块主要用convultion时，做img2col操作，同时vsp里也有双口（1 read port， 1 write port）sram用于缓存input/output activation
+1. vsp中的vsp_mem由8个vsp_mem_x0至vsp_mem_x7共计8个memory instance组成，每个instance depth=2048， read data width=128bit，write data width也是128bit
+2. 每个instance的128bit data width存储8个channel的input activation，每个instance对应input feature map的width方向，共计8个width方向的pixel
+3. vsp负责把这8个instance中的数据利用buffer执行img2col的操作将数据展开给到mmp
+4. vsp支持conv1x1，conv2x2，conv3x3， conv5x5， conv7x7的img2col操作
+
+
+
+
+
+任务3：用verilog写出psum，该模块主要是在做convlution事，存储partial sum， 以及在做weight stationary时，缓存多个psum值。
+
+
+
+任务4： 给每个module写出对应的testbench
